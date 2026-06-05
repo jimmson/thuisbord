@@ -1,0 +1,32 @@
+{{define "busWidget"}}
+<section class="widget widget--bus">
+  <div class="wtitle">
+    <span class="wicon">{{icon "bus"}}</span>
+    <div class="wtt"><h2>Bus</h2><span class="wsub">{{.StopName}}{{if .Stale}} · ⚠ {{.UpdatedAt}}{{end}}</span></div>
+  </div>
+  <div class="wbody">
+    {{if .Empty}}
+      <p class="empty">Geen ritten op dit moment.</p>
+    {{else}}
+      <div class="bus-list">
+        {{range .Departures}}
+          <div class="bus-row{{if .LeaveNow}} late{{end}}">
+            <div class="bus-line">{{.Line}}</div>
+            <div class="bus-mid">
+              <div class="bus-dest">{{.Destination}}</div>
+              <div class="bus-leave">
+                <span class="lv">{{icon "bus"}}vertrekt over {{.MinutesUntil}} min</span>
+                {{if not .LeaveNow}}<span class="lv walk">{{icon "footprints"}}lopen over {{.LeaveIn}} min</span>{{end}}
+              </div>
+            </div>
+            <div class="bus-time">
+              <div class="bus-dep">{{.Time}}</div>
+              {{if gt .DelayMin 0}}<div class="bus-delay">+{{.DelayMin}} min</div>{{end}}
+            </div>
+          </div>
+        {{end}}
+      </div>
+    {{end}}
+  </div>
+</section>
+{{end}}

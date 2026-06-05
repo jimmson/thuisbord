@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Kiosk full-page auto-reload: simplest reliable refresh for a wall tablet. -->
+  <meta http-equiv="refresh" content="{{.RefreshSeconds}}">
+  <title>{{.Title}}</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="dir-b">
+  <svg class="deco deco-boom" viewBox="0 0 200 200" fill="none" aria-hidden="true"><path d="M40 170 C 10 110, 60 40, 150 30 C 110 70, 95 110, 120 160 C 90 140, 65 150, 40 170 Z" fill="#2bb3a3"/></svg>
+  <svg class="deco deco-burst" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+    <g stroke="#f2b33d" stroke-width="5" stroke-linecap="round">
+      <line x1="64" y1="50" x2="94" y2="50"/><line x1="62.1" y1="57" x2="88.1" y2="72"/>
+      <line x1="57" y1="62.1" x2="72" y2="88.1"/><line x1="50" y1="64" x2="50" y2="94"/>
+      <line x1="43" y1="62.1" x2="28" y2="88.1"/><line x1="37.9" y1="57" x2="11.9" y2="72"/>
+      <line x1="36" y1="50" x2="6" y2="50"/><line x1="37.9" y1="43" x2="11.9" y2="28"/>
+      <line x1="43" y1="37.9" x2="28" y2="11.9"/><line x1="50" y1="36" x2="50" y2="6"/>
+      <line x1="57" y1="37.9" x2="72" y2="11.9"/><line x1="62.1" y1="43" x2="88.1" y2="28"/>
+    </g>
+    <circle cx="50" cy="50" r="9" fill="#e2553d"/>
+  </svg>
+
+  <header class="hdr">
+    <div class="wx">
+      {{with .Weather}}{{if .HasData}}
+        <div class="wx-now">
+          <span class="wx-now-ic">{{icon .Now.Icon}}</span>
+          <div class="wx-now-txt">
+            <div class="wx-temp">{{.Now.Temp}}°</div>
+            <div class="wx-cond">{{.Now.Cond}}</div>
+          </div>
+        </div>
+        {{with .Plus3h}}
+        <div class="hdr-div"></div>
+        <div class="wx-fc">
+          <div class="wx-h"><span class="wx-hh">{{.Label}}</span>{{icon .Icon}}<span class="wx-ht">{{.Temp}}°</span></div>
+        </div>
+        {{end}}
+      {{end}}{{end}}
+    </div>
+
+    <div class="time-wrap">
+      {{if .Weather.Days}}
+      <div class="wx-fc">
+        {{range .Weather.Days}}
+          <div class="wx-h"><span class="wx-hh">{{.Label}}</span>{{icon .Icon}}<span class="wx-ht">{{.Temp}}°</span></div>
+        {{end}}
+      </div>
+      <div class="hdr-div"></div>
+      {{end}}
+      <div class="time">
+        <div class="clock">{{.Clock}}</div>
+        <div class="date">{{.Date}}</div>
+      </div>
+    </div>
+  </header>
+
+  <main class="widgets">
+    {{template "busWidget" .Bus}}
+    {{template "trashWidget" .Trash}}
+  </main>
+</body>
+</html>

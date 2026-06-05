@@ -1,0 +1,24 @@
+services:
+  thuisbord:
+    build: .
+    image: thuisbord:latest
+    container_name: thuisbord
+    restart: unless-stopped        # survives reboots; respects a manual `docker stop`
+    ports:
+      - "8080:8080"
+    # Real values come from a local .env (gitignored). The ${VAR:-default}
+    # fallbacks below are neutral examples so it still builds without one.
+    # Copy .env.example to .env and fill in your stop/address/coordinates.
+    environment:
+      TZ: ${TZ:-Europe/Amsterdam}
+      DASH_BUS_TPC: ${DASH_BUS_TPC:-37400110}
+      DASH_WALK_OFFSET_MIN: ${DASH_WALK_OFFSET_MIN:-8}
+      DASH_POSTCODE: ${DASH_POSTCODE:-1011AB}
+      DASH_HOUSE_NUMBER: ${DASH_HOUSE_NUMBER:-1}
+      DASH_LAT: ${DASH_LAT:-52.3731}
+      DASH_LON: ${DASH_LON:-4.8922}
+      DASH_REFRESH_SECONDS: ${DASH_REFRESH_SECONDS:-60}
+      DASH_BUS_POLL_SECONDS: ${DASH_BUS_POLL_SECONDS:-30}
+      DASH_TRASH_POLL_HOURS: ${DASH_TRASH_POLL_HOURS:-6}
+      DASH_TRASH_WEEKS: ${DASH_TRASH_WEEKS:-4}
+      DASH_WEATHER_POLL_MIN: ${DASH_WEATHER_POLL_MIN:-15}

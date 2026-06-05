@@ -1,0 +1,38 @@
+{{define "trashWidget"}}
+<section class="widget widget--afval">
+  <div class="wtitle">
+    <span class="wicon">{{icon "trash-2"}}</span>
+    <div class="wtt"><h2>Afval</h2><span class="wsub">Ophaalschema{{if .Stale}} · ⚠ {{.UpdatedAt}}{{end}}</span></div>
+  </div>
+  <div class="wbody">
+    {{if .Empty}}
+      <p class="empty">Geen ophaaldagen bekend.</p>
+    {{else}}
+      <div class="chips">
+        {{range .Next}}
+          <div class="chip">
+            <span class="chip-ic kind-{{.Kind}}">{{icon (binIcon .Kind)}}</span>
+            <span class="chip-text"><span class="chip-name">{{.Fraction}}</span><span class="chip-when">{{.When}}</span></span>
+          </div>
+        {{end}}
+      </div>
+      <div class="cal">
+        <div class="cal-head">
+          <span class="cal-dow">ma</span><span class="cal-dow">di</span><span class="cal-dow">wo</span>
+          <span class="cal-dow">do</span><span class="cal-dow">vr</span><span class="cal-dow">za</span><span class="cal-dow">zo</span>
+        </div>
+        <div class="cal-grid">
+          {{range .Days}}
+            <div class="cal-cell{{if .IsToday}} today{{end}}{{if or .IsPast (not .InMonth)}} dim{{end}}{{if not .InMonth}} other{{end}}">
+              <span class="cal-num">{{.DayNum}}</span>
+              <span class="cal-dots">
+                {{range .Pickups}}<span class="cal-ic kind-{{.Kind}}">{{icon (binIcon .Kind)}}</span>{{end}}
+              </span>
+            </div>
+          {{end}}
+        </div>
+      </div>
+    {{end}}
+  </div>
+</section>
+{{end}}
