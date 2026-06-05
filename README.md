@@ -8,10 +8,10 @@ A header strip shows **live weather** (current conditions, a +3h outlook, and
 the next two days) from [Open-Meteo](https://open-meteo.com/) plus a clock and
 Dutch date, above two widgets:
 
-- **🚌 Bus** — real-time departures for the Rozenstraat stop in Purmerend (and the
-  opposite-direction quays), with a "when to leave" countdown that subtracts your
-  walking time. Data comes from [OVapi](http://v0.ovapi.nl/) — the same KV78turbo
-  feed that drives the physical departure boards at the stop.
+- **🚌 Bus** — real-time departures for one or more configured stops, with a
+  "when to leave" countdown that subtracts your walking time. Data comes from
+  [OVapi](http://v0.ovapi.nl/) — the same KV78turbo feed that drives the physical
+  departure boards at the stop.
 - **🗑️ Afval** — the household waste collection schedule for your address, as a
   4-week month calendar plus a "next collection per bin" summary. Data comes from
   the [Opzet afvalkalender](https://afvalkalender.purmerend.nl) used by Purmerend
@@ -38,6 +38,16 @@ docker compose up --build
 
 `.env` is gitignored; `docker-compose.yml` reads it via `${VAR:-default}`
 substitution and falls back to neutral examples if it's absent.
+
+### Prebuilt image
+
+CI publishes an image to GHCR on every push to `main`, so on a home server you
+can skip the build:
+
+```bash
+docker run -d --restart unless-stopped -p 8080:8080 --env-file .env \
+  ghcr.io/jimmson/thuisbord:latest
+```
 
 Point the tablet's browser at `http://<host>:8080` in fullscreen/kiosk mode.
 
@@ -82,4 +92,8 @@ internal/web/static/fonts self-hosted woff2 (Bricolage Grotesque, Jost)
 ```
 
 Add a widget by writing a poller + a `{{define}}` partial and one line in
-`dashboard.html`.
+`layout.html`.
+
+## License
+
+[MIT](LICENSE)
