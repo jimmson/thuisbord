@@ -81,11 +81,15 @@ func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, max
 	}
 
 	// Merge departures across all configured stops, soonest first.
+	var all []BusDeparture
 	for _, s := range board.Stops {
 		for _, d := range s.Departures {
 			mins := int(d.Expected.Sub(now).Minutes())
+			if mins < -1 {
+				continue // already gone (1-minute grace so a just-now bus lingers)
+			}
 			if mins < 0 {
-				continue // already departed
+				mins = 0
 			}
 			delay := 0
 			if !d.Target.IsZero() {
@@ -93,7 +97,7 @@ func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, max
 			}
 			cancelled := d.Status == "CANCEL"
 			leaveIn := mins - walkMin
-			v.Departures = append(v.Departures, BusDeparture{
+			all = append(all, BusDeparture{
 				Line:         d.Line,
 				Destination:  d.Destination,
 				Time:         d.Expected.In(loc).Format("15:04"),
@@ -106,13 +110,22 @@ func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, max
 			})
 		}
 	}
-	sort.Slice(v.Departures, func(i, j int) bool {
-		return v.Departures[i].MinutesUntil < v.Departures[j].MinutesUntil
-	})
-	if len(v.Departures) > max {
-		v.Departures = v.Departures[:max]
+	sort.SliceStable(all, func(i, j int) bool { return all[i].MinutesUntil < all[j].MinutesUntil })
+
+	// Cap by real (non-cancelled) departures so cancellations never push an
+	// actual upcoming bus off the board. Cancellations still show as context
+	// when they fall within the shown window.
+	realKept := 0
+	for _, dep := range all {
+		if realKept >= max {
+			break
+		}
+		v.Departures = append(v.Departures, dep)
+		if !dep.Cancelled {
+			realKept++
+		}
 	}
-	v.Empty = len(v.Departures) == 0
+	v.Empty = realKept == 0
 	return v
 }
 
