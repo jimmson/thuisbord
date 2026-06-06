@@ -114,18 +114,24 @@ func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, max
 
 	// Cap by real (non-cancelled) departures so cancellations never push an
 	// actual upcoming bus off the board. Cancellations still show as context
-	// when they fall within the shown window.
-	realKept := 0
+	// (capped, so a burst of them can't bloat the widget).
+	const maxCancelledShown = 2
+	realKept, cancelledShown := 0, 0
 	for _, dep := range all {
 		if realKept >= max {
 			break
 		}
-		v.Departures = append(v.Departures, dep)
-		if !dep.Cancelled {
+		if dep.Cancelled {
+			if cancelledShown >= maxCancelledShown {
+				continue
+			}
+			cancelledShown++
+		} else {
 			realKept++
 		}
+		v.Departures = append(v.Departures, dep)
 	}
-	v.Empty = realKept == 0
+	v.Empty = len(v.Departures) == 0
 	return v
 }
 
