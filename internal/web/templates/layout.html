@@ -23,37 +23,38 @@
   </svg>
 
   <header class="hdr">
+    {{with .Weather}}{{if .HasData}}
     <div class="wx">
-      {{with .Weather}}{{if .HasData}}
-        <div class="wx-now">
-          <span class="wx-now-ic">{{icon .Now.Icon}}</span>
-          <div class="wx-now-txt">
-            <div class="wx-temp">{{.Now.Temp}}°</div>
-            <div class="wx-cond">{{.Now.Cond}}</div>
-          </div>
+      <div class="wx-now">
+        <span class="wx-now-ic">{{icon .Now.Icon}}</span>
+        <div class="wx-now-txt">
+          <div class="wx-temp">{{.Now.Temp}}°</div>
+          <div class="wx-cond">{{.Now.Cond}}</div>
         </div>
-        {{with .Plus3h}}
-        <div class="hdr-div"></div>
-        <div class="wx-fc">
-          <div class="wx-h"><span class="wx-hh">{{.Label}}</span>{{icon .Icon}}<span class="wx-ht">{{.Temp}}°</span></div>
-        </div>
-        {{end}}
-      {{end}}{{end}}
-    </div>
-
-    <div class="time-wrap">
-      {{if .Weather.Days}}
-      <div class="wx-fc">
-        {{range .Weather.Days}}
-          <div class="wx-h"><span class="wx-hh">{{.Label}}</span>{{icon .Icon}}<span class="wx-ht">{{.Temp}}°</span></div>
-        {{end}}
       </div>
       <div class="hdr-div"></div>
-      {{end}}
-      <div class="time">
-        <div class="clock">{{.Clock}}</div>
-        <div class="date">{{.Date}}</div>
+      <div class="wx-fc">
+        {{with .Plus3h}}<div class="wx-h"><span class="wx-hh">{{.Label}}</span>{{icon .Icon}}<span class="wx-ht">{{.Temp}}°</span></div>{{end}}
+        {{range .Days}}<div class="wx-h"><span class="wx-hh">{{.Label}}</span>{{icon .Icon}}<span class="wx-ht">{{.Temp}}°</span></div>{{end}}
       </div>
+    </div>
+    {{end}}{{end}}
+
+    {{if .Upcoming}}
+    <div class="hdr-up">
+      {{range .Upcoming}}
+        <div class="up-item">
+          <span class="up-ic kind-{{.Kind}}">{{icon .Icon}}</span>
+          <span class="up-title">{{.Title}}</span>
+          <span class="up-when">{{.When}}</span>
+        </div>
+      {{end}}
+    </div>
+    {{end}}
+
+    <div class="time">
+      <div class="clock">{{.Clock}}</div>
+      <div class="date">{{.Date}}</div>
     </div>
   </header>
 

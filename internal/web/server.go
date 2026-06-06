@@ -12,6 +12,8 @@ import (
 
 	"thuisbord/internal/cache"
 	"thuisbord/internal/config"
+	"thuisbord/internal/events"
+	"thuisbord/internal/holidays"
 	"thuisbord/internal/opzet"
 	"thuisbord/internal/ovapi"
 	"thuisbord/internal/weather"
@@ -25,15 +27,17 @@ var staticFS embed.FS
 
 // Server renders the dashboard from the widget caches.
 type Server struct {
-	cfg     config.Config
-	bus     *cache.Cache[ovapi.Board]
-	trash   *cache.Cache[[]opzet.Pickup]
-	weather *cache.Cache[weather.Report]
-	tmpl    *template.Template
+	cfg      config.Config
+	bus      *cache.Cache[ovapi.Board]
+	trash    *cache.Cache[[]opzet.Pickup]
+	weather  *cache.Cache[weather.Report]
+	events   *cache.Cache[[]events.Event]
+	holidays *cache.Cache[[]holidays.Holiday]
+	tmpl     *template.Template
 }
 
 // NewServer loads icons, parses templates, and returns a ready Server.
-func NewServer(cfg config.Config, bus *cache.Cache[ovapi.Board], trash *cache.Cache[[]opzet.Pickup], wx *cache.Cache[weather.Report]) (*Server, error) {
+func NewServer(cfg config.Config, bus *cache.Cache[ovapi.Board], trash *cache.Cache[[]opzet.Pickup], wx *cache.Cache[weather.Report], evs *cache.Cache[[]events.Event], hol *cache.Cache[[]holidays.Holiday]) (*Server, error) {
 	if err := loadIcons(); err != nil {
 		return nil, err
 	}
@@ -45,7 +49,7 @@ func NewServer(cfg config.Config, bus *cache.Cache[ovapi.Board], trash *cache.Ca
 	if err != nil {
 		return nil, err
 	}
-	return &Server{cfg: cfg, bus: bus, trash: trash, weather: wx, tmpl: tmpl}, nil
+	return &Server{cfg: cfg, bus: bus, trash: trash, weather: wx, events: evs, holidays: hol, tmpl: tmpl}, nil
 }
 
 // Handler returns the HTTP mux for the dashboard.
@@ -66,6 +70,7 @@ type pageData struct {
 	Clock          string
 	Date           string
 	Weather        WeatherView
+	Upcoming       []UpcomingItem
 	Bus            BusView
 	Trash          TrashView
 }
@@ -76,6 +81,12 @@ func (s *Server) handleDashboard(w http.ResponseWriter, _ *http.Request) {
 	board, busAt, busOK := s.bus.Snapshot()
 	pickups, trashAt, trashOK := s.trash.Snapshot()
 	report, wxAt, wxOK := s.weather.Snapshot()
+	evs, _, _ := s.events.Snapshot()
+	hols, _, _ := s.holidays.Snapshot()
+
+	// Every calendar source funnels into one merged item list, which feeds both
+	// the month grid and the header "coming up" strip.
+	items := mergeCalItems(pickups, evs, hols)
 
 	data := pageData{
 		Title:          "Thuisbord",
@@ -83,8 +94,9 @@ func (s *Server) handleDashboard(w http.ResponseWriter, _ *http.Request) {
 		Clock:          now.Format("15:04"),
 		Date:           dutchLongDate(now),
 		Weather:        buildWeatherView(report, wxAt, wxOK),
+		Upcoming:       buildUpcoming(items, now, 3),
 		Bus:            buildBusView(board, s.cfg.Location, s.cfg.WalkOffset, s.cfg.MaxDepartures, now, busAt, busOK),
-		Trash:          buildTrashView(pickups, s.cfg.Location, now, trashAt, trashOK, s.cfg.TrashWeeks),
+		Trash:          buildTrashView(items, s.cfg.Location, now, trashAt, trashOK, s.cfg.TrashWeeks),
 	}
 
 	// Render to a buffer first so a template error never emits a half-written 200.

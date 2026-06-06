@@ -16,6 +16,8 @@ import (
 
 	"thuisbord/internal/cache"
 	"thuisbord/internal/config"
+	"thuisbord/internal/events"
+	"thuisbord/internal/holidays"
 	"thuisbord/internal/opzet"
 	"thuisbord/internal/ovapi"
 	"thuisbord/internal/weather"
@@ -35,10 +37,19 @@ func main() {
 	busCache := cache.New[ovapi.Board]()
 	trashCache := cache.New[[]opzet.Pickup]()
 	weatherCache := cache.New[weather.Report]()
+	eventsCache := cache.New[[]events.Event]()
+	holidaysCache := cache.New[[]holidays.Holiday]()
 
 	busClient := ovapi.New(cfg.Location)
 	trashClient := opzet.New(cfg.Location, cfg.Postcode, cfg.HouseNumber)
 	weatherClient := weather.New(cfg.Location, cfg.Lat, cfg.Lon)
+	// Events are filtered to the postcode area (e.g. "144" for Purmerend).
+	eventsPrefix := cfg.Postcode
+	if len(eventsPrefix) > 3 {
+		eventsPrefix = eventsPrefix[:3]
+	}
+	eventsClient := events.New(cfg.Location, eventsPrefix)
+	holidaysClient := holidays.New(cfg.Location)
 
 	go cache.Poll(ctx, busCache, "bus", cfg.BusPoll, func(c context.Context) (ovapi.Board, error) {
 		return busClient.Fetch(c, cfg.BusStopCodes)
@@ -49,8 +60,14 @@ func main() {
 	go cache.Poll(ctx, weatherCache, "weather", cfg.WeatherPoll, func(c context.Context) (weather.Report, error) {
 		return weatherClient.Fetch(c)
 	})
+	go cache.Poll(ctx, eventsCache, "events", cfg.EventsPoll, func(c context.Context) ([]events.Event, error) {
+		return eventsClient.Fetch(c)
+	})
+	go cache.Poll(ctx, holidaysCache, "holidays", cfg.HolidaysPoll, func(c context.Context) ([]holidays.Holiday, error) {
+		return holidaysClient.Fetch(c)
+	})
 
-	srv, err := web.NewServer(cfg, busCache, trashCache, weatherCache)
+	srv, err := web.NewServer(cfg, busCache, trashCache, weatherCache, eventsCache, holidaysCache)
 	if err != nil {
 		log.Fatalf("server: %v", err)
 	}

@@ -12,10 +12,13 @@ Dutch date, above two widgets:
   "when to leave" countdown that subtracts your walking time. Data comes from
   [OVapi](http://v0.ovapi.nl/) — the same KV78turbo feed that drives the physical
   departure boards at the stop.
-- **🗑️ Afval** — the household waste collection schedule for your address, as a
-  4-week month calendar plus a "next collection per bin" summary. Data comes from
-  the [Opzet afvalkalender](https://afvalkalender.purmerend.nl) used by Purmerend
-  (the full-year `kalender/{year}` endpoint joined with the fraction names).
+- **🗑️ Agenda** — a 4-week month calendar overlaying household waste collection
+  ([Opzet afvalkalender](https://afvalkalender.purmerend.nl), the full-year
+  `kalender/{year}` endpoint joined with fraction names), local events
+  ([DagjeWeg.NL](https://www.dagjeweg.nl/) RSS filtered to your postcode area),
+  and Dutch public holidays ([Nager.Date](https://date.nager.at/)), each with its
+  own icon and a legend. The header shows the next few things coming up across
+  all of these sources.
 
 Both widgets read from an in-memory cache refreshed by background pollers, so a
 slow or failed upstream never blanks the screen — it shows the last good data
@@ -59,11 +62,13 @@ All settings are environment variables (see `docker-compose.yml` for defaults):
 |----------|---------|---------|
 | `DASH_BUS_TPC` | `37400110` | OVapi TimingPointCodes, comma-separated (Ged. Singelgracht — line 305 → Amsterdam Centraal). Add more codes to show multiple stops. |
 | `DASH_WALK_OFFSET_MIN` | `8` | Minutes to leave before departure (walk + buffer to arrive early) |
-| `DASH_MAX_DEPARTURES` | `6` | How many bus departures to show |
+| `DASH_MAX_DEPARTURES` | `4` | How many bus departures to show |
 | `DASH_POSTCODE` | `1011AB` | Address postcode (uppercase, no space) |
 | `DASH_HOUSE_NUMBER` | `1` | Address house number |
 | `DASH_LAT` / `DASH_LON` | `52.3731` / `4.8922` | Coordinates for the weather forecast |
 | `DASH_WEATHER_POLL_MIN` | `15` | How often (minutes) to refresh the weather |
+| `DASH_EVENTS_POLL_HOURS` | `6` | How often to refresh local events (DagjeWeg) |
+| `DASH_HOLIDAYS_POLL_HOURS` | `24` | How often to refresh public holidays |
 | `DASH_REFRESH_SECONDS` | `60` | Browser full-page auto-reload cadence |
 | `DASH_BUS_POLL_SECONDS` | `30` | How often to refresh bus departures |
 | `DASH_TRASH_POLL_HOURS` | `6` | How often to refresh the waste schedule |
@@ -84,9 +89,12 @@ or inspect a stop directly with `curl http://v0.ovapi.nl/tpc/{code}`.
 cmd/server/main.go        wiring: config, clients, pollers, HTTP server
 internal/config           env-var configuration
 internal/cache            generic RWMutex cache + background poller
+internal/httpx            shared HTTP+JSON fetch helper
 internal/ovapi            OVapi bus-departure client
 internal/opzet            Opzet waste-schedule client
 internal/weather          Open-Meteo weather client (WMO code → icon/text)
+internal/events           DagjeWeg.NL events (RSS, postcode-filtered)
+internal/holidays         Nager.Date NL public holidays
 internal/web              server, view-building, templates, CSS
 internal/web/icons        Lucide SVGs, embedded + inlined via the `icon` template func
 internal/web/static/fonts self-hosted woff2 (Bricolage Grotesque, Jost)

@@ -18,7 +18,6 @@
                 {{if .Cancelled}}
                   <span class="lv status status-cancel">geannuleerd</span>
                 {{else}}
-                  {{if .Live}}<span class="lv status status-live"><span class="dot"></span>live</span>{{else}}<span class="lv status status-planned">gepland</span>{{end}}
                   <span class="lv">{{icon "bus"}}vertrekt over {{.MinutesUntil}} min</span>
                   {{if not .LeaveNow}}<span class="lv walk">{{icon "footprints"}}lopen over {{.LeaveIn}} min</span>{{end}}
                 {{end}}
@@ -26,7 +25,10 @@
             </div>
             <div class="bus-time">
               <div class="bus-dep">{{.Time}}</div>
-              {{if and (not .Cancelled) (gt .DelayMin 0)}}<div class="bus-delay">+{{.DelayMin}} min</div>{{end}}
+              <div class="bus-meta">
+                {{if not .Cancelled}}{{if .Live}}<span class="status status-live"><span class="dot"></span>live</span>{{else}}<span class="status status-planned">gepland</span>{{end}}{{end}}
+                {{if and (not .Cancelled) (gt .DelayMin 0)}}<span class="bus-delay">+{{.DelayMin}}</span>{{end}}
+              </div>
             </div>
           </div>
         {{end}}

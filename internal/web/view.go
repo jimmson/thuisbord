@@ -5,6 +5,8 @@ import (
 	"sort"
 	"time"
 
+	"thuisbord/internal/events"
+	"thuisbord/internal/holidays"
 	"thuisbord/internal/opzet"
 	"thuisbord/internal/ovapi"
 	"thuisbord/internal/weather"
@@ -69,7 +71,7 @@ type BusView struct {
 
 func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, max int, now time.Time, updatedAt time.Time, ok bool) BusView {
 	if max < 1 {
-		max = 6
+		max = 4
 	}
 	walkMin := int(walk.Minutes())
 	v := BusView{
@@ -135,12 +137,12 @@ func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, max
 	return v
 }
 
-// ---- Trash ----
+// ---- Calendar (afval + events + holidays) ----
 
-// TrashPickup is a fraction collected on a given day.
-type TrashPickup struct {
-	Fraction string
-	Kind     string
+// DayMarker is one icon shown in a calendar day cell.
+type DayMarker struct {
+	Icon string // resolved Lucide icon name
+	Kind string // colour/legend key: bin kinds, "event", "holiday"
 }
 
 // TrashDay is one cell in the month grid.
@@ -149,27 +151,62 @@ type TrashDay struct {
 	Month   string // short month name, set only on the 1st of a month / first cell
 	IsToday bool
 	IsPast  bool
-	InMonth bool // false for the leading days of a different month (dimmed)
-	Pickups []TrashPickup
+	InMonth bool // false for days of a different month (dimmed)
+	Markers []DayMarker
 }
 
-// TrashNext is one row in the "next collection per bin" summary.
-type TrashNext struct {
-	Fraction string
-	Kind     string
-	When     string // "vandaag", "morgen", "do 18 jun"
+// LegendItem keys the calendar icons below the grid.
+type LegendItem struct {
+	Icon  string
+	Kind  string
+	Label string
 }
 
-// TrashView is everything the trash widget template needs.
+// TrashView is everything the calendar widget needs.
 type TrashView struct {
 	Stale     bool
 	UpdatedAt string
-	Days      []TrashDay // weeks*7 cells, Monday-aligned
-	Next      []TrashNext
-	Empty     bool
+	Days      []TrashDay   // weeks*7 cells, Monday-aligned
+	Legend    []LegendItem // distinct marker kinds shown, as a key below the grid
 }
 
-func buildTrashView(pickups []opzet.Pickup, loc *time.Location, now time.Time, updatedAt time.Time, ok bool, weeks int) TrashView {
+// calItem is a unified calendar entry merged from every source. Adding a new
+// source means producing more calItems — the grid, legend, and upcoming list
+// all derive from these.
+type calItem struct {
+	Date  time.Time
+	Title string
+	Icon  string
+	Kind  string
+}
+
+func mergeCalItems(pickups []opzet.Pickup, evs []events.Event, hols []holidays.Holiday) []calItem {
+	items := make([]calItem, 0, len(pickups)+len(evs)+len(hols))
+	for _, p := range pickups {
+		items = append(items, calItem{Date: p.Date, Title: p.Fraction, Icon: binIcon(p.Kind), Kind: p.Kind})
+	}
+	for _, e := range evs {
+		items = append(items, calItem{Date: e.Date, Title: e.Title, Icon: "party-popper", Kind: "event"})
+	}
+	for _, h := range hols {
+		items = append(items, calItem{Date: h.Date, Title: h.Name, Icon: "flag", Kind: "holiday"})
+	}
+	return items
+}
+
+// legendLabel returns the key label for a kind (generic for non-bin sources).
+func legendLabel(kind, title string) string {
+	switch kind {
+	case "event":
+		return "Evenement"
+	case "holiday":
+		return "Feestdag"
+	default:
+		return title // bin fractions use their own name
+	}
+}
+
+func buildTrashView(items []calItem, loc *time.Location, now, updatedAt time.Time, ok bool, weeks int) TrashView {
 	if weeks < 1 {
 		weeks = 4
 	}
@@ -180,16 +217,15 @@ func buildTrashView(pickups []opzet.Pickup, loc *time.Location, now time.Time, u
 	v := TrashView{
 		Stale:     !ok || time.Since(updatedAt) > 36*time.Hour,
 		UpdatedAt: updatedAt.In(loc).Format("ma 2 jan 15:04"),
-		Empty:     len(pickups) == 0,
 	}
 
-	// Index pickups by day for quick lookup.
-	byDay := map[string][]TrashPickup{}
-	for _, p := range pickups {
-		key := dayStart(p.Date).Format(dayKey)
-		byDay[key] = append(byDay[key], TrashPickup{Fraction: p.Fraction, Kind: p.Kind})
+	byDay := map[string][]calItem{}
+	for _, it := range items {
+		key := dayStart(it.Date).Format(dayKey)
+		byDay[key] = append(byDay[key], it)
 	}
 
+	legendSeen := map[string]bool{}
 	for i := 0; i < weeks*7; i++ {
 		day := gridStart.AddDate(0, 0, i)
 		cell := TrashDay{
@@ -197,29 +233,49 @@ func buildTrashView(pickups []opzet.Pickup, loc *time.Location, now time.Time, u
 			IsToday: day.Equal(today),
 			IsPast:  day.Before(today),
 			InMonth: day.Month() == currentMonth,
-			Pickups: byDay[day.Format(dayKey)],
 		}
 		if day.Day() == 1 || i == 0 {
 			cell.Month = monthShort(day.Month())
 		}
+		for _, it := range byDay[day.Format(dayKey)] {
+			cell.Markers = append(cell.Markers, DayMarker{Icon: it.Icon, Kind: it.Kind})
+			if !legendSeen[it.Kind] {
+				legendSeen[it.Kind] = true
+				v.Legend = append(v.Legend, LegendItem{Icon: it.Icon, Kind: it.Kind, Label: legendLabel(it.Kind, it.Title)})
+			}
+		}
 		v.Days = append(v.Days, cell)
 	}
-
-	// "Next per bin": soonest upcoming date per Kind.
-	seen := map[string]bool{}
-	for _, p := range pickups {
-		d := dayStart(p.Date)
-		if d.Before(today) || seen[p.Kind] {
-			continue
-		}
-		seen[p.Kind] = true
-		v.Next = append(v.Next, TrashNext{
-			Fraction: p.Fraction,
-			Kind:     p.Kind,
-			When:     relativeDay(d, today),
-		})
-	}
 	return v
+}
+
+// ---- Header "coming up" ----
+
+// UpcomingItem is one entry in the header's next-things-up list.
+type UpcomingItem struct {
+	Icon  string
+	Kind  string
+	Title string
+	When  string // "vandaag" / "morgen" / "do 18 jun"
+}
+
+func buildUpcoming(items []calItem, now time.Time, n int) []UpcomingItem {
+	today := dayStart(now)
+	future := make([]calItem, 0, len(items))
+	for _, it := range items {
+		if !dayStart(it.Date).Before(today) {
+			future = append(future, it)
+		}
+	}
+	sort.Slice(future, func(i, j int) bool { return future[i].Date.Before(future[j].Date) })
+	out := make([]UpcomingItem, 0, n)
+	for _, it := range future {
+		if len(out) >= n {
+			break
+		}
+		out = append(out, UpcomingItem{Icon: it.Icon, Kind: it.Kind, Title: it.Title, When: relativeDay(dayStart(it.Date), today)})
+	}
+	return out
 }
 
 const dayKey = "2006-01-02"
