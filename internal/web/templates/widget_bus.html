@@ -10,18 +10,23 @@
     {{else}}
       <div class="bus-list">
         {{range .Departures}}
-          <div class="bus-row{{if .LeaveNow}} late{{end}}">
+          <div class="bus-row{{if .LeaveNow}} late{{end}}{{if .Cancelled}} cancelled{{end}}">
             <div class="bus-line">{{.Line}}</div>
             <div class="bus-mid">
               <div class="bus-dest">{{.Destination}}</div>
               <div class="bus-leave">
-                <span class="lv">{{icon "bus"}}vertrekt over {{.MinutesUntil}} min</span>
-                {{if not .LeaveNow}}<span class="lv walk">{{icon "footprints"}}lopen over {{.LeaveIn}} min</span>{{end}}
+                {{if .Cancelled}}
+                  <span class="lv status status-cancel">geannuleerd</span>
+                {{else}}
+                  {{if .Live}}<span class="lv status status-live"><span class="dot"></span>live</span>{{else}}<span class="lv status status-planned">gepland</span>{{end}}
+                  <span class="lv">{{icon "bus"}}vertrekt over {{.MinutesUntil}} min</span>
+                  {{if not .LeaveNow}}<span class="lv walk">{{icon "footprints"}}lopen over {{.LeaveIn}} min</span>{{end}}
+                {{end}}
               </div>
             </div>
             <div class="bus-time">
               <div class="bus-dep">{{.Time}}</div>
-              {{if gt .DelayMin 0}}<div class="bus-delay">+{{.DelayMin}} min</div>{{end}}
+              {{if and (not .Cancelled) (gt .DelayMin 0)}}<div class="bus-delay">+{{.DelayMin}} min</div>{{end}}
             </div>
           </div>
         {{end}}

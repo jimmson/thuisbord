@@ -25,6 +25,7 @@ type Config struct {
 	TrashPoll      time.Duration  // how often to refresh the waste schedule
 	WeatherPoll    time.Duration  // how often to refresh the weather
 	TrashWeeks     int            // number of weeks shown in the waste calendar
+	MaxDepartures  int            // max bus departures shown
 	Location       *time.Location // Europe/Amsterdam — drives all time rendering
 }
 
@@ -51,6 +52,7 @@ func Load() (Config, error) {
 		TrashPoll:      time.Duration(atoi(getenv("DASH_TRASH_POLL_HOURS", "6"), 6)) * time.Hour,
 		WeatherPoll:    time.Duration(atoi(getenv("DASH_WEATHER_POLL_MIN", "15"), 15)) * time.Minute,
 		TrashWeeks:     atoi(getenv("DASH_TRASH_WEEKS", "4"), 4),
+		MaxDepartures:  atoi(getenv("DASH_MAX_DEPARTURES", "6"), 6),
 		Location:       loc,
 	}, nil
 }

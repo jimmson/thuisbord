@@ -59,6 +59,7 @@ All settings are environment variables (see `docker-compose.yml` for defaults):
 |----------|---------|---------|
 | `DASH_BUS_TPC` | `37400110` | OVapi TimingPointCodes, comma-separated (Ged. Singelgracht — line 305 → Amsterdam Centraal). Add more codes to show multiple stops. |
 | `DASH_WALK_OFFSET_MIN` | `8` | Minutes to leave before departure (walk + buffer to arrive early) |
+| `DASH_MAX_DEPARTURES` | `6` | How many bus departures to show |
 | `DASH_POSTCODE` | `1011AB` | Address postcode (uppercase, no space) |
 | `DASH_HOUSE_NUMBER` | `1` | Address house number |
 | `DASH_LAT` / `DASH_LON` | `52.3731` / `4.8922` | Coordinates for the weather forecast |

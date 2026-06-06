@@ -31,6 +31,7 @@ type Departure struct {
 	Destination string    // headsign, e.g. "Amsterdam Centraal"
 	Target      time.Time // scheduled departure
 	Expected    time.Time // live departure (use this — matches the board)
+	Status      string    // TripStopStatus: DRIVING (live), PLANNED, CANCEL, …
 }
 
 // Stop is a single quay with its sorted upcoming departures.
@@ -132,7 +133,10 @@ func (c *Client) Fetch(ctx context.Context, codes []string) (Board, error) {
 		}
 		stop := Stop{Code: code, Name: rs.Stop.TimingPointName}
 		for _, p := range rs.Passes {
-			if strings.EqualFold(p.TripStopStatus, "PASSED") {
+			status := strings.ToUpper(p.TripStopStatus)
+			// Drop departures that have already gone; keep cancellations so the
+			// UI can show them (they're useful "don't wait" info).
+			if status == "PASSED" {
 				continue
 			}
 			expected := c.parse(p.ExpectedDepartureTime)
@@ -144,6 +148,7 @@ func (c *Client) Fetch(ctx context.Context, codes []string) (Board, error) {
 				Destination: p.DestinationName50,
 				Target:      c.parse(p.TargetDepartureTime),
 				Expected:    expected,
+				Status:      status,
 			})
 		}
 		sort.Slice(stop.Departures, func(i, j int) bool {

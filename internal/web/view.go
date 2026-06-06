@@ -10,8 +10,6 @@ import (
 	"thuisbord/internal/weather"
 )
 
-const maxDepartures = 4
-
 // ---- Weather ----
 
 // WxSlot is a render-ready compact forecast point (label + icon + temp).
@@ -56,6 +54,8 @@ type BusDeparture struct {
 	MinutesUntil int    // minutes until the bus departs
 	LeaveIn      int    // minutes until you must leave home (can be <= 0)
 	LeaveNow     bool   // true when it's time to go
+	Live         bool   // realtime-tracked (TripStopStatus DRIVING)
+	Cancelled    bool   // trip cancelled
 }
 
 // BusView is everything the bus widget template needs.
@@ -67,7 +67,10 @@ type BusView struct {
 	Empty      bool
 }
 
-func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, now time.Time, updatedAt time.Time, ok bool) BusView {
+func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, max int, now time.Time, updatedAt time.Time, ok bool) BusView {
+	if max < 1 {
+		max = 6
+	}
 	walkMin := int(walk.Minutes())
 	v := BusView{
 		Stale:     !ok || time.Since(updatedAt) > 2*time.Minute,
@@ -88,6 +91,7 @@ func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, now
 			if !d.Target.IsZero() {
 				delay = int(d.Expected.Sub(d.Target).Round(time.Minute).Minutes())
 			}
+			cancelled := d.Status == "CANCEL"
 			leaveIn := mins - walkMin
 			v.Departures = append(v.Departures, BusDeparture{
 				Line:         d.Line,
@@ -96,15 +100,17 @@ func buildBusView(board ovapi.Board, loc *time.Location, walk time.Duration, now
 				DelayMin:     delay,
 				MinutesUntil: mins,
 				LeaveIn:      leaveIn,
-				LeaveNow:     leaveIn <= 0,
+				LeaveNow:     !cancelled && leaveIn <= 0,
+				Live:         d.Status == "DRIVING",
+				Cancelled:    cancelled,
 			})
 		}
 	}
 	sort.Slice(v.Departures, func(i, j int) bool {
 		return v.Departures[i].MinutesUntil < v.Departures[j].MinutesUntil
 	})
-	if len(v.Departures) > maxDepartures {
-		v.Departures = v.Departures[:maxDepartures]
+	if len(v.Departures) > max {
+		v.Departures = v.Departures[:max]
 	}
 	v.Empty = len(v.Departures) == 0
 	return v

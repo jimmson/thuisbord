@@ -83,7 +83,7 @@ func (s *Server) handleDashboard(w http.ResponseWriter, _ *http.Request) {
 		Clock:          now.Format("15:04"),
 		Date:           dutchLongDate(now),
 		Weather:        buildWeatherView(report, wxAt, wxOK),
-		Bus:            buildBusView(board, s.cfg.Location, s.cfg.WalkOffset, now, busAt, busOK),
+		Bus:            buildBusView(board, s.cfg.Location, s.cfg.WalkOffset, s.cfg.MaxDepartures, now, busAt, busOK),
 		Trash:          buildTrashView(pickups, s.cfg.Location, now, trashAt, trashOK, s.cfg.TrashWeeks),
 	}
 

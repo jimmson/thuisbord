@@ -102,6 +102,19 @@ html, body { height: 100%; width: 100%; overflow: hidden; }
 .bus-row.late .bus-line { background: var(--coral); color: var(--cream); }
 .bus-row.late .bus-dep, .bus-row.late .bus-leave { color: var(--coral); font-weight: 700; }
 
+/* status chips */
+.status { font-size: 0.82em; font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+.status-live { color: var(--turq); }
+.status-live .dot { width: 0.5em; height: 0.5em; border-radius: 50%; background: var(--turq); animation: pulse 1.6s ease-in-out infinite; }
+.status-planned { color: #5c534a; opacity: 0.65; }
+.status-cancel { color: var(--coral); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+/* cancelled departures: struck through, muted, no leave-time */
+.bus-row.cancelled .bus-dest { text-decoration: line-through; opacity: 0.7; }
+.bus-row.cancelled .bus-dep { text-decoration: line-through; color: var(--coral); }
+.bus-row.cancelled .bus-line { background: #b9b1a4; color: var(--cream); }
+
 /* ===== afval ===== */
 .chips { display: flex; gap: clamp(8px, 0.9vw, 13px); flex: none; flex-wrap: wrap; margin-bottom: clamp(14px,1.6vw,22px); }
 .chip { display: flex; align-items: center; gap: 9px; padding: 8px 14px; border-radius: 999px; flex: 1 1 150px; min-width: 0; background: #efe2c8; border: 2px solid var(--ink); }
